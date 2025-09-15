@@ -1,0 +1,88 @@
+{{/*
+	The license inside this block applies to this file
+	Copyright 2024 Google Inc.
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+*/ -}}
+func flatten{{$.GetPrefix}}{{$.TitlelizeProperty}}(v interface{}, d *schema.ResourceData, config *transport_tpg.Config) interface{} {
+	if v == nil {
+		fmt.Printf("nancyhong_debug - v is nil \n")
+		return nil
+	}
+	fmt.Printf("nancyhong_debug - v is non nil \n")
+	original := v.(map[string]interface{})
+	if len(original) == 0 {
+		return flattenAlloyDBInstanceEmptyConnectionPoolConfig(v, d, config)
+	}
+	transformed := make(map[string]interface{})
+	transformed["enabled"] =
+		flattenAlloydbInstanceConnectionPoolConfigEnabled(original["enabled"], d, config)
+	transformed["pooler_count"] =
+		flattenAlloydbInstanceConnectionPoolConfigPoolerCount(original["poolerCount"], d, config)
+	transformed["flags"] =
+		flattenAlloydbInstanceConnectionPoolConfigFlags(original["flags"], d, config)
+	return []interface{}{transformed}
+}
+
+func flattenAlloyDBInstanceEmptyConnectionPoolConfig(v interface{}, d *schema.ResourceData, config *transport_tpg.Config) interface{} {
+	// The API returns an nil/empty value for connectionPoolConfig.enabled when
+	// it's set to false. So keep the user's value to avoid a permadiff.
+	return []interface{}{
+		map[string]interface{}{
+			"enabled":     d.Get("connection_pool_config.0.enabled"),
+		},
+	}
+	
+	/* // If the API returns nil for the object, then we should check if
+	// connectionPoolConfig.enabled is explicitly set to false in the Terraform
+	// configuration since the API doesn't explicitly set it if
+	// `connectionPoolConfig.enabled` is false. If so, return a structure that has
+	// it explicitly set to false to match the Terraform configuration and avoid a
+	// permadiff.
+	if enabledVal, ok := d.GetOkExists("connection_pool_config.0.enabled"); ok {
+		fmt.Printf("nancyhong_debug - d has enabled set \n")
+		if enabled, isBool := enabledVal.(bool); isBool && !enabled {
+			fmt.Printf("nancyhong_debug - v is nil and enabled is false \n")
+			return []interface{}{
+				map[string]interface{}{
+					"enabled": false,
+				},
+			}
+		} else if isBool {
+			fmt.Printf("nancyhong_debug - isBool is true but enabled is true? \n")
+		}
+	}
+	fmt.Printf("nancyhong_debug - enabled isn't set in d \n")
+	return nil */
+}
+
+func flattenAlloydbInstanceConnectionPoolConfigEnabled(v interface{}, d *schema.ResourceData, config *transport_tpg.Config) interface{} {
+	return v
+}
+
+func flattenAlloydbInstanceConnectionPoolConfigPoolerCount(v interface{}, d *schema.ResourceData, config *transport_tpg.Config) interface{} {
+	// Handles the string fixed64 format
+	if strVal, ok := v.(string); ok {
+		if intVal, err := tpgresource.StringToFixed64(strVal); err == nil {
+			return intVal
+		}
+	}
+
+	// number values are represented as float64
+	if floatVal, ok := v.(float64); ok {
+		intVal := int(floatVal)
+		return intVal
+	}
+
+	return v // let terraform core handle it otherwise
+}
+
+func flattenAlloydbInstanceConnectionPoolConfigFlags(v interface{}, d *schema.ResourceData, config *transport_tpg.Config) interface{} {
+	return v
+}
